@@ -44,7 +44,7 @@ gleec-meowmaker/
   kdf/
     kdf                     # the KDF binary (gitignored — you supply this)
     MM2.json.example        # template (you create MM2.json from this)
-    coins                   # MEWC + LTC entries from KomodoPlatform/coins
+    coins                   # MEWC + LTC entries from GLEECBTC/coins
     electrum_servers.json   # cipig (LTC) + community (MEWC) Electrum lists
   bot/
     main.py                 # the loop
@@ -261,7 +261,7 @@ small and well-isolated. To target another UTXO pair on KDF:
 
 1. Replace `BASE` / `REL` constants in `bot/main.py`.
 2. Add the two coins' entries to `kdf/coins` (copy from
-   [KomodoPlatform/coins](https://github.com/KomodoPlatform/coins)).
+   [GLEECBTC/coins](https://github.com/GLEECBTC/coins)).
 3. Add Electrum servers for both coins to `kdf/electrum_servers.json`.
 4. Update `bot/price_oracle.py` — currently hardcoded to NonKYC's
    `MEWC/USDT` and `LTC/USDT` markets; swap in whatever oracle quotes
