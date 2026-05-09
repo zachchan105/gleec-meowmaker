@@ -1,0 +1,16 @@
+{
+  "gui": "gleec-meowmaker",
+  "netid": 6133,
+  "rpc_password": "REPLACE_WITH_A_STRONG_RANDOM_STRING",
+  "passphrase": "REPLACE_WITH_YOUR_BIP39_SEED_PHRASE",
+  "enable_hd": true,
+  "seednodes": [
+    "seed01.kmdefi.net",
+    "seed02.kmdefi.net",
+    "seed03.kmdefi.net",
+    "seed04.kmdefi.net"
+  ],
+  "rpcip": "127.0.0.1",
+  "rpcport": 7783,
+  "dbdir": "./DB"
+}

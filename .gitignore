@@ -1,0 +1,27 @@
+# Secrets / per-instance config
+kdf/MM2.json
+bot/config.toml
+
+# KDF binary (large, user-supplied; download a release from
+# https://github.com/GLEECBTC/komodo-defi-framework/releases and drop it here)
+kdf/kdf
+
+# KDF runtime data
+kdf/DB/
+kdf/db/
+kdf/*.log
+kdf/.kdf.pid
+
+# Bot runtime
+bot/*.log
+bot/.bot.pid
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor noise
+.DS_Store
+*.swp
