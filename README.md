@@ -50,12 +50,14 @@ gleec-meowmaker/
     main.py                 # the loop
     kdf_client.py           # async KDF RPC client
     price_oracle.py         # NonKYC fetcher
+    dashboard.py            # read-only web UI (see "Dashboard" below)
     config.example.toml     # template (you create config.toml from this)
   scripts/
     start_kdf.sh stop_kdf.sh
     enable_coins.sh
     status.sh
     start_bot.sh stop_bot.sh
+    start_dashboard.sh stop_dashboard.sh
   requirements.txt
   LICENSE                   # MIT
   AGENTS.md                 # quick orientation for AI coding agents
@@ -167,6 +169,40 @@ To stop:
 ```bash
 ./scripts/stop_bot.sh   # cancels both MEWC/LTC orders, then exits
 ./scripts/stop_kdf.sh
+```
+
+## Dashboard (optional)
+
+A small read-only web UI at `bot/dashboard.py` shows a live view of:
+
+- bot process liveness, configured spread / sizing / refresh cadence
+- NonKYC reference prices, derived mid, and pool drift
+- wallet balances vs. the configured `usd_per_side` target (with bars)
+- the **full public MEWC/LTC orderbook** with your maker orders highlighted
+  (the cat-paw row 🐾) so you can see exactly where you sit in the book
+- the last 10 maker swap fills with their state (in-flight, finished, failed)
+- a live tail of `bot/bot.log`
+
+Run it as a separate, idempotent process:
+
+```bash
+./scripts/start_dashboard.sh    # → http://127.0.0.1:7784/
+./scripts/stop_dashboard.sh
+```
+
+The dashboard reuses `bot/config.toml` for `kdf_url` + `rpc_password` so it
+can read KDF state. It is **read-only by design** — it never calls
+`setprice`, `withdraw`, or any `cancel_*` RPC, and the `rpc_password` is
+never sent to the browser.
+
+It binds to `127.0.0.1:7784` by default. **Do not bind it to a public
+interface.** The page exposes balances, addresses, your open orders, and
+the bot's log; treat it like an admin panel. If you need remote access,
+SSH-tunnel instead:
+
+```bash
+ssh -L 7784:127.0.0.1:7784 your-host
+# then open http://127.0.0.1:7784/ on your laptop
 ```
 
 ## What the bot logs every cycle

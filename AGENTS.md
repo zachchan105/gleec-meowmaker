@@ -14,9 +14,12 @@ have the agent execute correctly without touching funds it shouldn't.
 ## Project shape (1 minute version)
 
 - **Python market-maker bot** in `bot/` (asyncio loop, ~250 LOC).
-  Single process. Reads price + balance, posts maker orders, repeats.
+ Single process. Reads price + balance, posts maker orders, repeats.
+- **Read-only web dashboard** in `bot/dashboard.py` (stdlib HTTP
+ server + embedded single-page UI). Optional. Separate process from
+ the bot, never calls write-RPCs, default-binds to `127.0.0.1:7784`.
 - **Bash control scripts** in `scripts/` (start/stop/status). All
-  idempotent — re-running a started script is a no-op.
+ idempotent — re-running a started script is a no-op.
 - **Komodo DeFi Framework binary** at `kdf/kdf` (Rust, user-supplied
   from <https://github.com/GLEECBTC/komodo-defi-framework/releases>).
   This is the atomic-swap engine the bot drives over local HTTP RPC.
@@ -32,7 +35,11 @@ have the agent execute correctly without touching funds it shouldn't.
 - Read every file in the repo (everything but the gitignored
   config/log/DB content is committed).
 - Modify `bot/main.py`, `bot/kdf_client.py`, `bot/price_oracle.py`
-  for strategy or feature changes.
+ for strategy or feature changes.
+- Modify `bot/dashboard.py` to add/change visualizations. The
+ dashboard is read-only by contract (no `setprice`, `withdraw`,
+ `cancel_*`); preserve that — anything that mutates state belongs
+ in the bot, not the dashboard.
 - Modify `bot/config.toml` to tweak `spread`, `usd_per_side`,
   `refresh_seconds`, `min_post_volume_*`, `max_drift_vs_pool`.
 - Modify `kdf/electrum_servers.json` to add/remove Electrum servers.
@@ -105,6 +112,8 @@ curl -s --url http://127.0.0.1:7783 \
 | "Start everything" | `./scripts/start_kdf.sh && ./scripts/enable_coins.sh && ./scripts/start_bot.sh` |
 | "Stop everything" | `./scripts/stop_bot.sh && ./scripts/stop_kdf.sh` |
 | "Status" / "How's the bot?" | `./scripts/status.sh` then summarize |
+| "Show me / open the dashboard" | `./scripts/start_dashboard.sh`, report URL (default `http://127.0.0.1:7784/`) |
+| "Stop the dashboard" | `./scripts/stop_dashboard.sh` |
 | "What's the bot doing?" | `tail -50 bot/bot.log` |
 | "Why did X happen?" | Read `bot/bot.log` AND `kdf/kdf.log`, then explain |
 | "Tighten the spread to 1%" | Edit `spread = 0.01` in `bot/config.toml`, then `./scripts/stop_bot.sh && ./scripts/start_bot.sh` |
@@ -125,8 +134,14 @@ curl -s --url http://127.0.0.1:7783 \
    must match `kdf/MM2.json.rpc_password` exactly. Mismatches surface
    as 401 errors in `bot/bot.log`.
 5. **Graceful shutdown.** Always `./scripts/stop_bot.sh` (SIGTERM,
-   cancels orders) before `./scripts/stop_kdf.sh`. Reverse order
-   leaves orders live on the P2P network with KDF dead, which is bad.
+ cancels orders) before `./scripts/stop_kdf.sh`. Reverse order
+ leaves orders live on the P2P network with KDF dead, which is bad.
+6. **Dashboard stays loopback.** `bot/dashboard.py` defaults to
+ binding `127.0.0.1`. Don't change `dashboard_host` in
+ `config.toml` to a public address without explicit user consent —
+ the page exposes balances, addresses, open orders, and the bot
+ log. If the user wants remote access, suggest an SSH tunnel
+ (`ssh -L 7784:127.0.0.1:7784`) instead.
 
 ## When in doubt
 

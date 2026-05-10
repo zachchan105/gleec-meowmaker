@@ -34,3 +34,12 @@ min_post_volume_ltc  = 0.001
 # At steady state we have exactly 2 (one per side). If KDF reports more
 # (e.g. after a crash) the bot wipes them and reposts.
 max_open_orders_per_pair = 2
+
+# ---- Read-only web dashboard (`python -m bot.dashboard`) -------------------
+# The dashboard reuses kdf_url + rpc_password above. It NEVER calls write
+# RPCs (no setprice / withdraw / cancel) and the rpc_password is never sent
+# to the browser. Bind to 127.0.0.1 unless you really know what you're doing
+# — the page exposes balances, addresses, open orders, and a tail of bot.log.
+# If you need remote access, use an SSH tunnel (`ssh -L 7784:127.0.0.1:7784`).
+dashboard_host = "127.0.0.1"
+dashboard_port = 7784

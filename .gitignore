@@ -15,6 +15,7 @@ kdf/.kdf.pid
 # Bot runtime
 bot/*.log
 bot/.bot.pid
+bot/.dashboard.pid
 
 # Python
 __pycache__/
