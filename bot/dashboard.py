@@ -2,7 +2,7 @@
 
 Serves a single-page UI at http://127.0.0.1:7784/ (configurable) showing:
 
-  - Bot process liveness, configured spread / usd_per_side / refresh
+  - Bot process liveness, configured spread / USD sizing / refresh
   - NonKYC oracle prices (MEWC/USDT, LTC/USDT, derived mid, pool last)
   - Wallet balances vs. configured target sizing
   - Full MEWC/LTC public orderbook with OUR orders highlighted
@@ -224,6 +224,14 @@ def _bot_pid() -> int | None:
         return None
 
 
+def _usd_targets_resolved(cfg: dict) -> tuple[Any, Any]:
+    """Match `bot.main._usd_targets` for dashboard bars."""
+    base = cfg["usd_per_side"]
+    um = cfg.get("usd_per_side_mewc", base)
+    ul = cfg.get("usd_per_side_ltc", base)
+    return um, ul
+
+
 def _gather_snapshot(cfg: dict) -> dict:
     url = cfg["kdf_url"]
     pw = cfg["rpc_password"]
@@ -234,12 +242,17 @@ def _gather_snapshot(cfg: dict) -> dict:
     swaps = _cached("swaps", 5.0, lambda: _gather_recent_swaps(url, pw))
     oracle = _cached("oracle", 10.0, _gather_oracle)
 
+    um, ul = _usd_targets_resolved(cfg)
     return {
         "now": time.time(),
         "config": {
             "pair": f"{BASE}/{REL}",
             "spread": cfg.get("spread"),
             "usd_per_side": cfg.get("usd_per_side"),
+            "usd_per_side_mewc": cfg.get("usd_per_side_mewc"),
+            "usd_per_side_ltc": cfg.get("usd_per_side_ltc"),
+            "usd_target_mewc": um,
+            "usd_target_ltc": ul,
             "refresh_seconds": cfg.get("refresh_seconds"),
             "min_post_volume_mewc": cfg.get("min_post_volume_mewc"),
             "min_post_volume_ltc": cfg.get("min_post_volume_ltc"),
@@ -581,7 +594,15 @@ INDEX_HTML = r"""<!doctype html>
     $("pairLabel").textContent = s.config.pair || "MEWC/LTC";
     const sp = s.config.spread;
     $("kSpread").textContent = (sp != null) ? (+(sp*100).toFixed(3) + "%") : "–";
-    $("kSize").textContent = (s.config.usd_per_side != null) ? ("$" + s.config.usd_per_side) : "–";
+    const tm = s.config.usd_target_mewc;
+    const tl = s.config.usd_target_ltc;
+    if (tm != null && tl != null && +tm !== +tl) {
+      $("kSize").textContent = "$" + tm + " MEWC / $" + tl + " LTC";
+    } else if (tm != null) {
+      $("kSize").textContent = "$" + tm + " / side";
+    } else {
+      $("kSize").textContent = "–";
+    }
     $("kRefresh").textContent = (s.config.refresh_seconds != null) ? s.config.refresh_seconds : "–";
 
     const o = s.oracle || {};
@@ -609,11 +630,14 @@ INDEX_HTML = r"""<!doctype html>
       const b = bals[coin] || {};
       const sp = +b.spendable || 0;
       let target = 0, usdVal = 0;
+      const usdT = coin === "MEWC"
+        ? (+s.config.usd_target_mewc || +s.config.usd_per_side || 0)
+        : (+s.config.usd_target_ltc || +s.config.usd_per_side || 0);
       if (coin === "MEWC" && mewc) {
-        target = (s.config.usd_per_side || 0) / mewc;
+        target = usdT / mewc;
         usdVal = sp * mewc;
       } else if (coin === "LTC" && ltc) {
-        target = (s.config.usd_per_side || 0) / ltc;
+        target = usdT / ltc;
         usdVal = sp * ltc;
       }
       const pct = target ? Math.min(200, (sp/target)*100) : 0;
@@ -632,7 +656,7 @@ INDEX_HTML = r"""<!doctype html>
             <div class="fill" style="width:${fillClamped}%; ${overshoot ? 'background: linear-gradient(90deg, var(--bid), #56d364);' : ''}"></div>
           </div>
           <div class="meta">
-            target ${target ? fmtAmt(target) : "–"} ${coin} (${fmtUsd(s.config.usd_per_side || 0)})
+            target ${target ? fmtAmt(target) : "–"} ${coin} (${fmtUsd(usdT)})
             · ${target ? Math.round(pct) + "% of target" : "no oracle"}
             ${b.address ? "· " + b.address : ""}
           </div>

@@ -40,8 +40,9 @@ have the agent execute correctly without touching funds it shouldn't.
  dashboard is read-only by contract (no `setprice`, `withdraw`,
  `cancel_*`); preserve that — anything that mutates state belongs
  in the bot, not the dashboard.
-- Modify `bot/config.toml` to tweak `spread`, `usd_per_side`,
-  `refresh_seconds`, `min_post_volume_*`, `max_drift_vs_pool`.
+- Modify `bot/config.toml` to tweak `spread`, `usd_per_side`, optional
+  `usd_per_side_mewc` / `usd_per_side_ltc`, `refresh_seconds`,
+  `min_post_volume_*`, `max_drift_vs_pool`.
 - Modify `kdf/electrum_servers.json` to add/remove Electrum servers.
 - Run any script under `scripts/` — they are designed to be safe to
   invoke any time and report state clearly.
@@ -67,8 +68,9 @@ have the agent execute correctly without touching funds it shouldn't.
   shows `currently_matching` or `my_recent_swaps` shows an unfinished
   swap). It would lose swap state and may strand funds in HTLCs until
   the refund timelock expires.
-- **Never widen** `usd_per_side`, change `spread`, or alter pricing
-  logic without first surfacing the financial impact in plain English.
+- **Never widen** `usd_per_side` / `usd_per_side_mewc` / `usd_per_side_ltc`,
+  change `spread`, or alter pricing logic without first surfacing the
+  financial impact in plain English.
 - **Never `kill -9`** the bot — its SIGTERM handler cancels open
   orders before exit. Use `./scripts/stop_bot.sh` instead.
 

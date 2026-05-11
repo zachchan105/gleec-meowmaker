@@ -30,7 +30,9 @@ no custody, just your seed and ~$40 of inventory.
 
 - **Pair**: MEWC <-> LTC
 - **Strategy**: passive maker, single seed; no wash trading.
-- **Sizing**: ~$20 of MEWC posted to sell + ~$20 of LTC posted to buy.
+- **Sizing**: `usd_per_side` sets a symmetric USD target per leg (default
+  ~$20 sell MEWC + ~$20 sell LTC). Optional `usd_per_side_mewc` /
+  `usd_per_side_ltc` override each leg for uneven inventory.
 - **Pricing**: NonKYC `MEWC/USDT` and `LTC/USDT` mids, divided to get a
   fair MEWC/LTC ratio. NonKYC's `MEWC/LTC` AMM pool is used only as a
   drift sanity check.
@@ -133,8 +135,9 @@ cp bot/config.example.toml bot/config.toml
 Edit `bot/config.toml`:
 
 - `rpc_password` — must match `MM2.json.rpc_password` byte-for-byte.
-- (Optional) tweak `usd_per_side`, `spread`, `refresh_seconds`.
-  Defaults are 1.5% half-spread, $20/side, 90s refresh.
+- (Optional) tweak `usd_per_side`, optional `usd_per_side_mewc` /
+  `usd_per_side_ltc`, `spread`, `refresh_seconds`.
+  Defaults are 1.5% half-spread, $20/side symmetric, 90s refresh.
 
 `config.toml` is gitignored.
 
@@ -177,7 +180,7 @@ A small read-only web UI at `bot/dashboard.py` shows a live view of:
 
 - bot process liveness, configured spread / sizing / refresh cadence
 - NonKYC reference prices, derived mid, and pool drift
-- wallet balances vs. the configured `usd_per_side` target (with bars)
+- wallet balances vs. configured USD targets per coin (with bars)
 - the **full public MEWC/LTC orderbook** with your maker orders highlighted
   (the cat-paw row 🐾) so you can see exactly where you sit in the book
 - the last 10 maker swap fills with their state (in-flight, finished, failed)

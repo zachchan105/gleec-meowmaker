@@ -6,7 +6,8 @@ One process, one seed. Every `refresh_seconds`:
   2. Compute mid (LTC per MEWC) and (optionally) sanity-check vs the NonKYC
      MEWC/LTC pool last price.
   3. Read MEWC + LTC spendable balances from KDF.
-  4. Compute volumes from `usd_per_side`, capped by available balance.
+  4. Compute volumes from USD sizing targets (see `_usd_targets`), capped
+     by available balance.
   5. cancel_all_orders for the pair (both directions).
   6. setprice twice:
        - sell MEWC for LTC at mid * (1 + spread)
@@ -71,6 +72,18 @@ def _setup_logging() -> None:
     LOG.setLevel(logging.INFO)
 
 
+def _usd_targets(cfg: dict) -> tuple[Decimal, Decimal]:
+    """Return (USD target for sell-MEWC side, USD target for sell-LTC side).
+
+    `usd_per_side` is the symmetric default. Optional `usd_per_side_mewc` /
+    `usd_per_side_ltc` override each leg when you hold uneven inventory.
+    """
+    base = Decimal(str(cfg["usd_per_side"]))
+    usd_mewc = Decimal(str(cfg["usd_per_side_mewc"])) if "usd_per_side_mewc" in cfg else base
+    usd_ltc = Decimal(str(cfg["usd_per_side_ltc"])) if "usd_per_side_ltc" in cfg else base
+    return usd_mewc, usd_ltc
+
+
 def _compute_orders(
     mewc_balance: Decimal,
     ltc_balance: Decimal,
@@ -78,7 +91,8 @@ def _compute_orders(
     ltc_usd: Decimal,
     mid: Decimal,
     spread: Decimal,
-    usd_per_side: Decimal,
+    usd_sell_mewc: Decimal,
+    usd_sell_ltc: Decimal,
 ) -> tuple[
     tuple[Decimal, Decimal, bool],
     tuple[Decimal, Decimal, bool],
@@ -93,8 +107,10 @@ def _compute_orders(
     `base` for `rel` at this `price` (rel per base)". So the buy-MEWC side
     is expressed as "sell LTC for MEWC at MEWC-per-LTC".
 
+    `usd_sell_mewc` / `usd_sell_ltc` are the USD notionals to post on each
+    leg (sell MEWC, sell LTC), typically from `_usd_targets(cfg)`.
+
     `*_max` is True when the desired USD volume meets or exceeds the
-    available balance. In that case we tell KDF `max=true` so it posts
     "everything spendable minus tx fees" instead of us having to budget
     for fees ourselves (which is what triggered the
     "Not enough <coin> for swap" errors in the first run).
@@ -103,8 +119,8 @@ def _compute_orders(
     buy_mewc_per_ltc_mid = Decimal(1) / mid              # MEWC per LTC, mid
     buy_price = buy_mewc_per_ltc_mid * (Decimal(1) + spread)  # ask more MEWC per LTC
 
-    desired_sell_vol_mewc = usd_per_side / mewc_usd
-    desired_buy_vol_ltc = usd_per_side / ltc_usd
+    desired_sell_vol_mewc = usd_sell_mewc / mewc_usd
+    desired_buy_vol_ltc = usd_sell_ltc / ltc_usd
 
     sell_max = desired_sell_vol_mewc >= mewc_balance
     buy_max = desired_buy_vol_ltc >= ltc_balance
@@ -117,7 +133,7 @@ def _compute_orders(
 
 async def _run_cycle(client: KdfClient, cfg: dict) -> None:
     spread = Decimal(str(cfg["spread"]))
-    usd_per_side = Decimal(str(cfg["usd_per_side"]))
+    usd_mewc, usd_ltc = _usd_targets(cfg)
     max_drift = Decimal(str(cfg.get("max_drift_vs_pool", 0)))
     min_mewc = Decimal(str(cfg["min_post_volume_mewc"]))
     min_ltc = Decimal(str(cfg["min_post_volume_ltc"]))
@@ -161,7 +177,8 @@ async def _run_cycle(client: KdfClient, cfg: dict) -> None:
         ltc_usd=quote.ltc_usd,
         mid=quote.mid_ltc_per_mewc,
         spread=spread,
-        usd_per_side=usd_per_side,
+        usd_sell_mewc=usd_mewc,
+        usd_sell_ltc=usd_ltc,
     )
 
     # cancel everything we have on this pair so each cycle is a clean replace.
@@ -233,9 +250,10 @@ async def _main_async() -> int:
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, _handle_signal, sig.name)
 
+    u_m, u_l = _usd_targets(cfg)
     LOG.info(
-        "started: pair=%s/%s  spread=%s  usd_per_side=%s  refresh=%ss",
-        BASE, REL, cfg["spread"], cfg["usd_per_side"], refresh,
+        "started: pair=%s/%s  spread=%s  sizing=$%s MEWC / $%s LTC  refresh=%ss",
+        BASE, REL, cfg["spread"], u_m, u_l, refresh,
     )
 
     try:

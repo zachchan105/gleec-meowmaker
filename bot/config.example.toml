@@ -8,8 +8,14 @@ kdf_url = "http://127.0.0.1:7783"
 rpc_password = "REPLACE_WITH_SAME_VALUE_AS_MM2_JSON_RPC_PASSWORD"
 
 # How much (USD) of each coin to keep posted on each side of the book.
-# Total exposure across both orders ~= 2 * usd_per_side (here, $40).
+# Symmetric default: `usd_per_side` applies to both the sell-MEWC leg and
+# the sell-LTC (= buy-MEWC) leg. Total exposure ~= 2 * usd_per_side (here, $40).
 usd_per_side = 20.0
+
+# Optional: override one or both legs when your inventory is uneven — e.g.
+# more LTC than MEWC. Omitted keys fall back to `usd_per_side`.
+# usd_per_side_mewc = 26.0
+# usd_per_side_ltc = 40.0
 
 # Half-spread, applied each side. 0.015 = 1.5% above mid for sells and 1.5%
 # below mid for buys (~3% round-trip width). Tighten to attract more takers.
