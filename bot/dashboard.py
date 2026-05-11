@@ -393,18 +393,28 @@ INDEX_HTML = r"""<!doctype html>
   .ob td { padding: 4px 6px; text-align: right; position: relative; z-index: 1; }
   .ob td:first-child { text-align: left; }
   .ob tr { position: relative; }
-  .ob tr.mine { background: var(--ours-soft); }
+  /* "Ours" = left accent + paw; keep row fill light so depth bars stay readable. */
+  .ob tr.mine {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 140, 66, 0.22) 0%,
+      rgba(255, 140, 66, 0.06) 28%,
+      transparent 72%
+    );
+    box-shadow: inset 3px 0 0 var(--ours);
+  }
   .ob tr.mine td:first-child::before {
     content: "🐾"; margin-right: 6px;
   }
   .ob tr .depth {
     position: absolute; right: 0; top: 0; bottom: 0;
-    z-index: 0; opacity: 0.35;
+    z-index: 0; opacity: 0.42;
     transition: width 400ms ease;
   }
   .ob .asks tr .depth { background: var(--ask-soft); }
   .ob .bids tr .depth { background: var(--bid-soft); }
-  .ob tr.mine .depth { background: var(--ours-soft) !important; opacity: 0.55; }
+  /* Same red/green depth as everyone else so bar width = fair comparison. */
+  .ob tr.mine .depth { opacity: 0.5; }
   .ob .empty { padding: 12px; color: var(--muted); font-size: 12px; text-align: center; }
   .ob .spread {
     text-align: center; color: var(--muted); font-size: 11px;
@@ -494,7 +504,7 @@ INDEX_HTML = r"""<!doctype html>
   </div>
 
   <div class="panel col-12">
-    <h2>Public orderbook · MEWC/LTC · 🐾 = ours</h2>
+    <h2>Public orderbook · MEWC/LTC · 🐾 = ours · shaded bar = size vs largest on that side</h2>
     <div class="ob">
       <div class="asks">
         <h3>Asks · sell MEWC for LTC</h3>
@@ -698,10 +708,10 @@ INDEX_HTML = r"""<!doctype html>
 
     $("obAsks").innerHTML = asks.length
       ? asks.map(e => renderRow(e, "ask")).join("")
-      : `<tr><td class="empty" colspan="3">no asks</td></tr>`;
+      : `<tr><td class="empty" colspan="4">no asks</td></tr>`;
     $("obBids").innerHTML = bids.length
       ? bids.map(e => renderRow(e, "bid")).join("")
-      : `<tr><td class="empty" colspan="3">no bids</td></tr>`;
+      : `<tr><td class="empty" colspan="4">no bids</td></tr>`;
 
     // Spread between best ask and best bid
     const bestAsk = asks.length ? Math.min(...asks.map(e => +e.price)) : null;
